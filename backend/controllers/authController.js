@@ -28,8 +28,11 @@ export const login = async (req, res) => {
 
   try {
     if (isAdmin) {
-      const admin = await Admin.findOne({ email: loginId });
-      if (admin && await bcrypt.compare(password, admin.password)) {
+      const cleanLoginId = (loginId || '').trim();
+      const cleanPassword = (password || '').trim();
+      const emailRegex = new RegExp(`^${cleanLoginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}$`, 'i');
+      const admin = await Admin.findOne({ email: emailRegex });
+      if (admin && await bcrypt.compare(cleanPassword, admin.password)) {
         // Check maintenance mode for admin (only bypass gumansingh.CitiCon@gmail.com)
         const maintenanceSetting = await SystemSetting.findOne({ key: 'maintenance_mode' });
         if (maintenanceSetting && (maintenanceSetting.value === 'true' || maintenanceSetting.value === true)) {
@@ -69,8 +72,15 @@ export const login = async (req, res) => {
         });
       }
     } else {
-      const employee = await Employee.findOne({ $or: [{ email: loginId }, { empCode: loginId }] });
-      if (employee && employee.password === password) {
+      const cleanLoginId = (loginId || '').trim();
+      const cleanPassword = (password || '').trim();
+      const emailRegex = new RegExp(`^${cleanLoginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}$`, 'i');
+      const employee = await Employee.findOne({ $or: [{ email: emailRegex }, { empCode: new RegExp(`^${cleanLoginId}$`, 'i') }] });
+      const isEmpMatch = employee && (
+        employee.password === cleanPassword || 
+        (employee.password && employee.password.startsWith('$2') && await bcrypt.compare(cleanPassword, employee.password))
+      );
+      if (isEmpMatch) {
         // Check maintenance mode
         const maintenanceSetting = await SystemSetting.findOne({ key: 'maintenance_mode' });
         if (maintenanceSetting && (maintenanceSetting.value === 'true' || maintenanceSetting.value === true)) {
