@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeoRen Enterprise - Employee Portal QR Code</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    body {
+      background: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #0f172a;
+    }
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 28px;
+      padding: 40px 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      border: 1px solid #e2e8f0;
+      text-align: center;
+      position: relative;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .logo-img {
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      object-fit: cover;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      border: 2px solid #ffffff;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    p.subtitle {
+      font-size: 13.5px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+    .qr-frame {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 24px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .qr-image {
+      width: 250px;
+      height: 250px;
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+    .scan-guide {
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 9999px;
+    }
+    .url-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #334155;
+      word-break: break-all;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .url-text {
+      font-family: monospace;
+      font-size: 12px;
+      color: #2563eb;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: #0f172a;
+      color: #ffffff;
+      border: 1px solid #0f172a;
+    }
+    .btn-primary:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+    .footer-note {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .card {
+        box-shadow: none;
+        border: none;
+        max-width: 100%;
+        padding: 20px;
+      }
+      .btn-group, .footer-note, .url-box button {
+        display: none !important;
+      }
+      .qr-frame {
+        border-style: solid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="logo-container">
+      <img src="logo.jpeg" alt="NeoRen Logo" class="logo-img" onerror="this.src='https://ui-avatars.com/api/?name=NeoRen&background=0f172a&color=fff&size=128'" />
+    </div>
+
+    <div class="badge">NeoRen Enterprise Pvt Ltd</div>
+    <h1>Employee Portal</h1>
+    <p class="subtitle">Scan the QR code below with your phone camera to instantly open the employee login portal.</p>
+
+    <div class="qr-frame">
+      <img src="employee_portal_qr.png" alt="Employee Portal QR Code" class="qr-image" />
+      <div class="scan-guide">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+          <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+          <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+          <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        </svg>
+        Point phone camera to scan
+      </div>
+    </div>
+
+    <div class="url-box">
+      <span class="url-text" id="targetUrl">https://neo-ren-hrms-frontend.vercel.app/login</span>
+      <button onclick="copyUrl()" style="background:none;border:none;color:#2563eb;cursor:pointer;font-weight:600;font-size:12px;">Copy</button>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="window.print()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Print Poster / Standee
+      </button>
+      <a class="btn btn-secondary" href="employee_portal_qr.png" download="NeoRen_Employee_Portal_QR.png">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PNG
+      </a>
+    </div>
+
+    <div class="footer-note">Designed & Developed by Oditech Global Pvt. Ltd.</div>
+  </div>
+
+  <script>
+    function copyUrl() {
+      const url = document.getElementById('targetUrl').innerText;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('URL copied to clipboard: ' + url);
+      });
+    }
+  </script>
+</body>
+</html>

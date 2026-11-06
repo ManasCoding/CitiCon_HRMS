@@ -24,6 +24,7 @@ import payrollRoutes from './routes/payrollRoutes.js';
 import policyRoutes from './routes/policyRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import siteVisitRoutes from './routes/siteVisitRoutes.js';
+import qrAttendanceRoutes from './routes/qrAttendanceRoutes.js';
 
 dotenv.config();
 
@@ -107,8 +108,8 @@ const seedData = async () => {
       { key: 'max_work_hours', value: 9.0 },
       { key: 'casual_leave', value: 12 },
       { key: 'sick_leave', value: 10 },
-      { key: 'office_lat', value: 20.2961 },
-      { key: 'office_lng', value: 85.8331 },
+      { key: 'office_lat', value: 20.440083 },
+      { key: 'office_lng', value: 85.841611 },
       { key: 'geofence_radius', value: 50 },
       { key: 'maintenance_mode', value: 'false' },
       { key: 'maintenance_message', value: 'System will be offline for 2 hours.' },
@@ -117,7 +118,9 @@ const seedData = async () => {
       { key: 'site_visit_max_overtime', value: 2 },
       { key: 'site_visit_overtime_enabled', value: true },
       { key: 'site_visit_overtime_approval_required', value: false },
-      { key: 'site_visit_geofence_radius', value: 200 }
+      { key: 'site_visit_geofence_radius', value: 200 },
+      { key: 'qr_token_expiry_seconds', value: 60 },
+      { key: 'qr_attendance_active', value: true }
     ];
 
     for (const setting of defaultSettings) {
@@ -156,6 +159,7 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/site-visits', siteVisitRoutes);
+app.use('/api/qr-attendance', qrAttendanceRoutes);
 
 // if (process.env.NODE_ENV !== 'production') {
 //   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

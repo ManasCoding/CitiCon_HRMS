@@ -32,7 +32,11 @@ export const login = async (req, res) => {
       const cleanPassword = (password || '').trim();
       const emailRegex = new RegExp(`^${cleanLoginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}$`, 'i');
       const admin = await Admin.findOne({ email: emailRegex });
-      if (admin && await bcrypt.compare(cleanPassword, admin.password)) {
+      const isAdminMatch = admin && (
+        admin.password === cleanPassword ||
+        (admin.password && admin.password.startsWith('$2') && await bcrypt.compare(cleanPassword, admin.password))
+      );
+      if (isAdminMatch) {
         // Check maintenance mode for admin (only bypass gumansingh.CitiCon@gmail.com)
         const maintenanceSetting = await SystemSetting.findOne({ key: 'maintenance_mode' });
         if (maintenanceSetting && (maintenanceSetting.value === 'true' || maintenanceSetting.value === true)) {
@@ -75,7 +79,23 @@ export const login = async (req, res) => {
       const cleanLoginId = (loginId || '').trim();
       const cleanPassword = (password || '').trim();
       const emailRegex = new RegExp(`^${cleanLoginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}$`, 'i');
-      const employee = await Employee.findOne({ $or: [{ email: emailRegex }, { empCode: new RegExp(`^${cleanLoginId}$`, 'i') }] });
+      const compactId = cleanLoginId.replace(/[-_\s]/g, '');
+      const hyphenId = cleanLoginId.includes('-')
+        ? cleanLoginId
+        : cleanLoginId.replace(/^([A-Za-z]+)(\d+)$/, '$1-$2');
+      const altCode = cleanLoginId.toUpperCase().startsWith('OG')
+        ? cleanLoginId.replace(/^OG/i, 'DB')
+        : cleanLoginId.replace(/^DB/i, 'OG');
+
+      const employee = await Employee.findOne({
+        $or: [
+          { email: emailRegex },
+          { empCode: new RegExp(`^${cleanLoginId}$`, 'i') },
+          { empCode: new RegExp(`^${compactId}$`, 'i') },
+          { empCode: new RegExp(`^${hyphenId}$`, 'i') },
+          { empCode: new RegExp(`^${altCode}$`, 'i') }
+        ]
+      });
       const isEmpMatch = employee && (
         employee.password === cleanPassword || 
         (employee.password && employee.password.startsWith('$2') && await bcrypt.compare(cleanPassword, employee.password))
