@@ -80,7 +80,26 @@ export const getLiveQrCode = async (req, res) => {
     const expirySetting = await SystemSetting.findOne({ key: 'qr_token_expiry_seconds' });
     const expirySeconds = parseInt(expirySetting?.value, 10) || 60;
 
-    const frontendBaseUrl = (process.env.FRONTEND_URL || 'https://neo-ren-hrms-frontend.vercel.app').replace(/\/$/, '');
+    // Determine target attendance URL:
+    // 1. Database setting 'qr_frontend_url' if set
+    // 2. Query param baseUrl if passed from Admin UI
+    // 3. process.env.FRONTEND_URL if not localhost
+    // 4. Default to production 'https://neo-ren-hrms-frontend.vercel.app'
+    const urlSetting = await SystemSetting.findOne({ key: 'qr_frontend_url' });
+    let frontendBaseUrl = urlSetting?.value || req.query.baseUrl || process.env.FRONTEND_URL || 'https://neo-ren-hrms-frontend.vercel.app';
+    
+    // Safety check: If baseUrl points to localhost, mobile scanners will not work unless on the exact same device.
+    // Allow query override or fall back to production if not explicitly kept
+    if (req.query.baseUrl) {
+      frontendBaseUrl = req.query.baseUrl;
+    } else if (urlSetting?.value) {
+      frontendBaseUrl = urlSetting.value;
+    } else if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
+      frontendBaseUrl = process.env.FRONTEND_URL;
+    } else {
+      frontendBaseUrl = 'https://neo-ren-hrms-frontend.vercel.app';
+    }
+    frontendBaseUrl = frontendBaseUrl.trim().replace(/\/$/, '');
 
     const nonce = crypto.randomBytes(16).toString('hex');
     const token = jwt.sign(
@@ -157,22 +176,21 @@ export const scanQrAttendance = async (req, res) => {
   const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   const userAgentStr = req.headers['user-agent'] || '';
 
-  // Step 1: Validate QR Token
-  if (!qrToken) {
-    return res.status(400).json({ success: false, message: 'QR code token is missing. Please scan again.' });
-  }
-
-  try {
-    const decoded = jwt.verify(qrToken, JWT_SECRET);
-    if (decoded.type !== 'OFFICE_QR_ATTENDANCE') {
-      return res.status(400).json({ success: false, message: 'Invalid QR token.' });
+  // Step 1: Validate QR Token (supports permanent QR mode)
+  const isPermanent = qrToken === 'PERMANENT_OFFICE_QR' || qrToken === 'permanent' || !qrToken;
+  if (!isPermanent) {
+    try {
+      const decoded = jwt.verify(qrToken, JWT_SECRET);
+      if (decoded.type !== 'OFFICE_QR_ATTENDANCE') {
+        return res.status(400).json({ success: false, message: 'Invalid QR token.' });
+      }
+    } catch (err) {
+      return res.status(401).json({ 
+        success: false, 
+        expired: true, 
+        message: 'QR code has expired. Please scan the latest code on the office screen.' 
+      });
     }
-  } catch (err) {
-    return res.status(401).json({ 
-      success: false, 
-      expired: true, 
-      message: 'QR code has expired. Please scan the latest code on the office screen.' 
-    });
   }
 
   // Step 2: Check Device Credential
@@ -329,11 +347,26 @@ export const scanQrAttendance = async (req, res) => {
         location: 'Office QR Terminal'
       });
 
+      const userToken = jwt.sign(
+        { id: employee._id, role: 'employee' },
+        process.env.JWT_SECRET || 'oditechglobal_secret_99',
+        { expiresIn: process.env.JWT_EXPIRE || '1d' }
+      );
+      const userPayload = {
+        id: employee._id,
+        name: employee.fullName,
+        email: employee.email,
+        role: 'employee',
+        slug: employee.empCode
+      };
+
       return res.json({
         success: true,
         action: 'CHECK_IN',
         greeting,
         message: 'Your check-in has been successfully recorded.',
+        token: userToken,
+        user: userPayload,
         employee: {
           id: employee._id,
           empCode: employee.empCode,
@@ -428,11 +461,26 @@ export const scanQrAttendance = async (req, res) => {
         location: 'Office QR Terminal'
       });
 
+      const userToken = jwt.sign(
+        { id: employee._id, role: 'employee' },
+        process.env.JWT_SECRET || 'oditechglobal_secret_99',
+        { expiresIn: process.env.JWT_EXPIRE || '1d' }
+      );
+      const userPayload = {
+        id: employee._id,
+        name: employee.fullName,
+        email: employee.email,
+        role: 'employee',
+        slug: employee.empCode
+      };
+
       return res.json({
         success: true,
         action: 'CHECK_OUT',
         greeting,
         message: 'Your check-out has been successfully recorded.',
+        token: userToken,
+        user: userPayload,
         employee: {
           id: employee._id,
           empCode: employee.empCode,
@@ -464,11 +512,26 @@ export const scanQrAttendance = async (req, res) => {
     if (registeredDevice.scanHistory.length > 50) registeredDevice.scanHistory.pop();
     await registeredDevice.save();
 
+    const userToken = jwt.sign(
+      { id: employee._id, role: 'employee' },
+      process.env.JWT_SECRET || 'oditechglobal_secret_99',
+      { expiresIn: process.env.JWT_EXPIRE || '1d' }
+    );
+    const userPayload = {
+      id: employee._id,
+      name: employee.fullName,
+      email: employee.email,
+      role: 'employee',
+      slug: employee.empCode
+    };
+
     return res.json({
       success: true,
       action: 'ALREADY_COMPLETED',
       greeting,
       message: "Today's attendance is already completed!",
+      token: userToken,
+      user: userPayload,
       employee: {
         id: employee._id,
         empCode: employee.empCode,
@@ -499,21 +562,21 @@ export const registerDeviceAndCheckIn = async (req, res) => {
   const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   const userAgentStr = req.headers['user-agent'] || '';
 
-  // 1. Verify QR token
-  if (!qrToken) {
-    return res.status(400).json({ success: false, message: 'QR token is required. Please scan again.' });
-  }
-  try {
-    const decoded = jwt.verify(qrToken, JWT_SECRET);
-    if (decoded.type !== 'OFFICE_QR_ATTENDANCE') {
-      return res.status(400).json({ success: false, message: 'Invalid QR token' });
+  // 1. Verify QR token (supports permanent QR mode)
+  const isPermanent = qrToken === 'PERMANENT_OFFICE_QR' || qrToken === 'permanent' || !qrToken;
+  if (!isPermanent) {
+    try {
+      const decoded = jwt.verify(qrToken, JWT_SECRET);
+      if (decoded.type !== 'OFFICE_QR_ATTENDANCE') {
+        return res.status(400).json({ success: false, message: 'Invalid QR token' });
+      }
+    } catch (err) {
+      return res.status(401).json({ 
+        success: false, 
+        expired: true, 
+        message: 'QR code has expired. Please scan the latest code on the office display.' 
+      });
     }
-  } catch (err) {
-    return res.status(401).json({ 
-      success: false, 
-      expired: true, 
-      message: 'QR code has expired. Please scan the latest code on the office display.' 
-    });
   }
 
   // 2. Validate Credentials
@@ -1027,7 +1090,7 @@ export const getQrStats = async (req, res) => {
  */
 export const getQrSettings = async (req, res) => {
   try {
-    const keys = ['qr_token_expiry_seconds', 'qr_attendance_active'];
+    const keys = ['qr_token_expiry_seconds', 'qr_attendance_active', 'qr_frontend_url'];
     const settings = await SystemSetting.find({ key: { $in: keys } });
     const settingsMap = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
 
@@ -1035,7 +1098,8 @@ export const getQrSettings = async (req, res) => {
       success: true,
       settings: {
         qr_token_expiry_seconds: parseInt(settingsMap.qr_token_expiry_seconds, 10) || 60,
-        qr_attendance_active: settingsMap.qr_attendance_active === 'true' || settingsMap.qr_attendance_active === true || settingsMap.qr_attendance_active === undefined
+        qr_attendance_active: settingsMap.qr_attendance_active === 'true' || settingsMap.qr_attendance_active === true || settingsMap.qr_attendance_active === undefined,
+        qr_frontend_url: settingsMap.qr_frontend_url || process.env.FRONTEND_URL || 'https://neo-ren-hrms-frontend.vercel.app'
       }
     });
   } catch (error) {
@@ -1048,7 +1112,15 @@ export const getQrSettings = async (req, res) => {
  */
 export const updateQrSettings = async (req, res) => {
   try {
-    const { qr_token_expiry_seconds, qr_attendance_active } = req.body;
+    const { qr_token_expiry_seconds, qr_attendance_active, qr_frontend_url } = req.body;
+
+    if (qr_frontend_url !== undefined) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'qr_frontend_url' },
+        { value: String(qr_frontend_url).trim() },
+        { upsert: true }
+      );
+    }
 
     if (qr_token_expiry_seconds !== undefined) {
       await SystemSetting.findOneAndUpdate(
@@ -1068,6 +1140,44 @@ export const updateQrSettings = async (req, res) => {
 
     res.json({ success: true, message: 'QR Attendance settings updated successfully.' });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET PERMANENT OFFICE QR CODE (Never Expiring)
+ * Encodes: https://neo-ren-hrms-frontend.vercel.app/login?qr_attendance=true
+ */
+export const getPermanentOfficeQr = async (req, res) => {
+  try {
+    const urlSetting = await SystemSetting.findOne({ key: 'qr_frontend_url' });
+    let frontendBaseUrl = urlSetting?.value || req.query.baseUrl || process.env.FRONTEND_URL || 'https://neo-ren-hrms-frontend.vercel.app';
+    if (!frontendBaseUrl || frontendBaseUrl.includes('localhost')) {
+      frontendBaseUrl = 'https://neo-ren-hrms-frontend.vercel.app';
+    }
+    frontendBaseUrl = frontendBaseUrl.trim().replace(/\/$/, '');
+
+    const permanentUrl = `${frontendBaseUrl}/login?qr_attendance=true`;
+
+    const qrDataUrl = await QRCode.toDataURL(permanentUrl, {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      width: 500,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    });
+
+    res.json({
+      success: true,
+      permanent: true,
+      qrUrl: permanentUrl,
+      qrDataUrl,
+      target: 'Employee Portal Login & Auto Check-In'
+    });
+  } catch (error) {
+    console.error('[getPermanentOfficeQr Error]:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
